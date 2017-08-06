@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import tempfile
 import unittest
@@ -13,19 +14,27 @@ class TestLanguages(unittest.TestCase):
         self.text = "This is a test"
 
     def check_lang(self, lang):
-        """Create mp3 file"""
-        (f, path) = tempfile.mkstemp(suffix='.mp3', prefix='test_%s_' % lang) 
-        
-        # Create gTTS and save
+        """Create mp3 files"""
+        (f, path) = tempfile.mkstemp(suffix='.mp3', prefix='test_{}_'.format(lang)) 
+        (f_slow, path_slow) = tempfile.mkstemp(suffix='.mp3', prefix='test_{}_slow'.format(lang))
+
+        # Create gTTS (normal) and save
         tts = gTTS(self.text, lang)
         tts.save(path)
         
-        # Check if file created is > 2k
+        # Create gTTS (slow) and save
+        tts = gTTS(self.text, lang, slow = True)
+        tts.save(path_slow)
+
+        # Check if files created is > 2k
         filesize = os.path.getsize(path)
+        filesize_slow = os.path.getsize(path_slow)
         self.assertTrue(filesize > 2000)
+        self.assertTrue(filesize_slow > 2000)
         
         # Cleanup
         os.remove(path)
+        os.remove(path_slow)
 
 # Generate TestLanguages.check_lang tests (as TestLanguages.test_lang_<lang>) for each language
 # Based on: http://stackoverflow.com/a/1194012
@@ -66,6 +75,26 @@ class TestTokenizer(unittest.TestCase):
         """Tokenization on spaces"""
         tts = gTTS(self.text_long_no_punctuation, self.lang)
         self.assertEqual(len(tts.text_parts), 3)
+
+class TestTokenizerUnicode(unittest.TestCase):
+    """Tokenization of Unicode when text is longer than what is allowed (MAX_CHARS)"""
+
+    def setUp(self):
+        self.lang = 'zh-cn'
+        # Unicode literal for Python 2.x, 3.3+
+        self.text = u"""
+这是一个三岁的小孩
+在讲述她从一系列照片里看到的东西。
+对这个世界， 她也许还有很多要学的东西，
+但在一个重要的任务上， 她已经是专家了：
+去理解她所看到的东西。
+我们的社会已经在科技上取得了前所未有的进步。
+"""
+
+    def test_punctuation_tokenization(self):
+        """Tokenization on punctuation"""
+        tts = gTTS(self.text, self.lang)
+        self.assertEqual(len(tts.text_parts), 6)
 
 if __name__ == '__main__':
     unittest.main()

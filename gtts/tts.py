@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
-import re, requests
+import re, requests, warnings
+from six.moves import urllib
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from gtts_token.gtts_token import Token
 
 class gTTS:
     """ gTTS (Google Text to Speech): an interface to Google's Text to Speech API """
+
+    # Google TTS API supports two read speeds
+    # (speed <= 0.3: slow; speed > 0.3: normal; default: 1)
+    class Speed:
+        SLOW = 0.3
+        NORMAL = 1
 
     GOOGLE_TTS_URL = 'https://translate.google.com/translate_tts'
     MAX_CHARS = 100 # Max characters the Google TTS API takes at a time
@@ -37,6 +45,7 @@ class gTTS:
         'id' : 'Indonesian',
         'it' : 'Italian',
         'ja' : 'Japanese',
+        'km' : 'Khmer (Cambodian)',
         'ko' : 'Korean',
         'la' : 'Latin',
         'lv' : 'Latvian',
@@ -44,10 +53,10 @@ class gTTS:
         'no' : 'Norwegian',
         'pl' : 'Polish',
         'pt' : 'Portuguese',
-        'pt-br' : 'Portuguese (Brazil)',
         'ro' : 'Romanian',
         'ru' : 'Russian',
         'sr' : 'Serbian',
+        'si' : 'Sinhala',
         'sk' : 'Slovak',
         'es' : 'Spanish',
         'es-es' : 'Spanish (Spain)',
@@ -57,11 +66,12 @@ class gTTS:
         'ta' : 'Tamil',
         'th' : 'Thai',
         'tr' : 'Turkish',
+        'uk' : 'Ukrainian',
         'vi' : 'Vietnamese',
         'cy' : 'Welsh'
     }
 
-    def __init__(self, text, lang = 'en', debug = False):
+    def __init__(self, text, lang = 'en', slow = False, debug = False):
         self.debug = debug
         if lang.lower() not in self.LANGUAGES:
             raise Exception('Language not supported: %s' % lang)
@@ -73,8 +83,15 @@ class gTTS:
         else:
             self.text = text
 
+        # Read speed
+        if slow:
+            self.speed = self.Speed().SLOW
+        else:
+            self.speed = self.Speed().NORMAL
+
+
         # Split text in parts
-        if len(text) <= self.MAX_CHARS: 
+        if self._len(text) <= self.MAX_CHARS:
             text_parts = [text]
         else:
             text_parts = self._tokenize(text, self.MAX_CHARS)           
@@ -92,7 +109,6 @@ class gTTS:
         """ Do the Web request and save to `savefile` """
         with open(savefile, 'wb') as f:
             self.write_to_fp(f)
-            f.close()
 
     def write_to_fp(self, fp):
         """ Do the Web request and save to a file-like object """
@@ -100,10 +116,11 @@ class gTTS:
             payload = { 'ie' : 'UTF-8',
                         'q' : part,
                         'tl' : self.lang,
+                        'ttsspeed' : self.speed,
                         'total' : len(self.text_parts),
                         'idx' : idx,
                         'client' : 'tw-ob',
-                        'textlen' : len(part),
+                        'textlen' : self._len(part),
                         'tk' : self.token.calculate_token(part)}
             headers = {
                 "Referer" : "http://translate.google.com/",
@@ -111,20 +128,38 @@ class gTTS:
             }
             if self.debug: print(payload)
             try:
-                r = requests.get(self.GOOGLE_TTS_URL, params=payload, headers=headers)
+                # Disable requests' ssl verify to accomodate certain proxies and firewalls
+                # Filter out urllib3's insecure warnings. We can live without ssl verify here
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=InsecureRequestWarning)
+                    r = requests.get(self.GOOGLE_TTS_URL,
+                                     params=payload,
+                                     headers=headers,
+                                     proxies=urllib.request.getproxies(),
+                                     verify=False)
                 if self.debug:
                     print("Headers: {}".format(r.request.headers))
-                    print("Reponse: {}, Redirects: {}".format(r.status_code, r.history))
+                    print("Request url: {}".format(r.request.url))
+                    print("Response: {}, Redirects: {}".format(r.status_code, r.history))
                 r.raise_for_status()
                 for chunk in r.iter_content(chunk_size=1024):
                     fp.write(chunk)
             except Exception as e:
                 raise
 
+    def _len(self, text):
+        """ Get char len of `text`, after decoding if Python 2 """
+        try:
+            # Python 2
+            return len(unicode(text))
+        except NameError:
+            # Python 3
+            return len(text)
+
     def _tokenize(self, text, max_size):
-        """ Tokenizer on basic roman punctuation """ 
+        """ Tokenizer on basic punctuation """
         
-        punc = "¡!()[]¿?.,;:—«»\n"
+        punc = "¡!()[]¿?.,،;:—。、：？！\n"
         punc_list = [re.escape(c) for c in punc]
         pattern = '|'.join(punc_list)
         parts = re.split(pattern, text)
@@ -138,7 +173,7 @@ class gTTS:
         """ Recursive function that splits `thestring` in chunks
         of maximum `max_size` chars delimited by `delim`. Returns list. """ 
         
-        if len(thestring) > max_size:
+        if self._len(thestring) > max_size:
             idx = thestring.rfind(delim, 0, max_size)
             return [thestring[:idx]] + self._minimize(thestring[idx:], delim, max_size)
         else:

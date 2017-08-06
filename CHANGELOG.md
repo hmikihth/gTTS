@@ -5,6 +5,39 @@ This file adheres to [Keep a CHANGELOG](http://keepachangelog.com).
 
 ## [Unreleased]
 
+## [1.2.1] - 2017-08-02
+### Added
+- More Unicode punctuation to the tokenizer (such as for Chinese and Japanese)
+
+### Fixed
+- Unicode tokenization of strings larger than 100 characters in Python 2 (#71, #73)
+
+## [1.2.0] - 2017-04-15
+### Added
+- Option for slower read speed (`slow=True` for `gTTS()`, `--slow` for `gtts-cli`)
+- System proxy settings are passed transparently to all http requests
+- Language: 'km', 'Khmer (Cambodian)'
+- Language: 'si', 'Sinhala'
+- Language: 'uk', 'Ukrainian'
+- More debug output
+
+### Removed
+- Language: 'pt-br' : 'Portuguese (Brazil)' (it was the same as 'pt' and not Brazilian)
+
+### Fixed
+- The text to read is now cut in proper chunks in Python 2 unicode. This broke reading for many languages such as Russian.
+- Disabled SSL verify on http requests to accommodate certain firewalls and proxies.
+- Better Python 2/3 support in general
+- Various fixes and cleanups
+
+## [1.1.8] - 2017-01-15
+### Added
+- Added stdin support (w/ `text` set to `-`) to `gtts-cli.py`/`gtts-cli` (#56 thanks @WyohKnott)
+
+## [1.1.7] - 2016-12-14
+### Changed
+- Added utf-8 support to `gtts-cli.py`/`gtts-cli` (#52 thanks @bakaiadam) 
+
 ## [1.1.6] - 2016-07-20
 ### Added
 - 'bn' : 'Bengali' (thanks @sakibiqbal, @mshubhankar)
@@ -96,7 +129,11 @@ This file adheres to [Keep a CHANGELOG](http://keepachangelog.com).
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/pndurette/gTTS/compare/v1.1.6...develop
+[Unreleased]: https://github.com/pndurette/gTTS/compare/v1.2.1...master
+[1.2.1]: https://github.com/pndurette/gTTS/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/pndurette/gTTS/compare/v1.1.8...v1.2.0
+[1.1.8]: https://github.com/pndurette/gTTS/compare/v1.1.7...v1.1.8
+[1.1.7]: https://github.com/pndurette/gTTS/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/pndurette/gTTS/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/pndurette/gTTS/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/pndurette/gTTS/compare/v1.1.3...v1.1.4
